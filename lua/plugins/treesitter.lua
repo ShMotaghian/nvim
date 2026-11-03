@@ -6,6 +6,30 @@ return { -- Highlight, edit, and navigate code
   branch = 'master',
   build = ':TSUpdate',
   main = 'nvim-treesitter.configs', -- Sets main module to use for opts
+  -- Compatibility shim: the `master` branch registers its query predicates and
+  -- directives (set-lang-from-info-string!, downcase!, is?, ...) with `all = false`,
+  -- expecting one node per capture. Neovim 0.12 dropped that option and always
+  -- passes a list of nodes, so they crash with "attempt to call method 'range'"
+  -- (e.g. on markdown code fences). Hand those handlers a single node again.
+  init = function()
+    local query = vim.treesitter.query
+    for _, name in ipairs { 'add_predicate', 'add_directive' } do
+      local orig = query[name]
+      query[name] = function(n, handler, opts)
+        if type(opts) == 'table' and opts.all == false then
+          local h = handler
+          handler = function(match, ...)
+            local single = {}
+            for id, nodes in pairs(match) do
+              single[id] = type(nodes) == 'table' and nodes[#nodes] or nodes
+            end
+            return h(single, ...)
+          end
+        end
+        return orig(n, handler, opts)
+      end
+    end
+  end,
   -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
   opts = {
     ensure_installed = {
@@ -43,7 +67,6 @@ return { -- Highlight, edit, and navigate code
       --  If you are experiencing weird indenting issues, add the language to
       --  the list of additional_vim_regex_highlighting and disabled languages for indent.
       additional_vim_regex_highlighting = { 'ruby' },
-      disable = { 'markdown', 'markdown_inline' },
     },
     -- c/cpp disabled: nvim-treesitter's indent query predicate handler
     -- (query_predicates.lua) errors on this Neovim version for common C++

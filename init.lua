@@ -33,6 +33,8 @@ require('lazy').setup {
   require 'plugins.venvselector',
   require 'plugins.vimtex',
   require 'plugins.codex',
+  require 'plugins.copilot',
+  require 'plugins.render-markdown',
 }
 
 require 'core.snippets' -- Custom code snippets
@@ -40,18 +42,3 @@ require 'core.snippets' -- Custom code snippets
 require 'core.fold'
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'markdown',
-  callback = function()
-    vim.treesitter.query.set(
-      'markdown',
-      'highlights',
-      [[
-      (fenced_code_block
-        (fenced_code_block_delimiter) @markup.raw.block)
-      (fenced_code_block
-        (info_string (language) @label))
-    ]]
-    )
-  end,
-})
